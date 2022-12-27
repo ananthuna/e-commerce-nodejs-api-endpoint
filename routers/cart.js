@@ -2,6 +2,7 @@ const express = require("express");
 const Cart = require("../models/Cart");
 const Item = require("../models/Item");
 const Auth = require("../middleware/auth");
+const { ObjectId } = require('mongodb')
 const router = new express.Router();
 
 //get cart
@@ -95,6 +96,7 @@ router.delete("/cartitems/", Auth, async (req, res) => {
 
 //Edit cart item quantity
 router.patch('/cartitems/:id', Auth, async (req, res) => {
+
     const owner = req.user._id;
     const updates = Object.keys(req.body)
     const allowedUpdates = ['quantity']
@@ -104,16 +106,20 @@ router.patch('/cartitems/:id', Auth, async (req, res) => {
     }
     try {
         const cart = await Cart.findOne({ owner });
-        const item = cart.items.every((item) => item.itemId == req.params.id)
-        if (!item) {
-            return res.status(404).json({ error: 'invalid product selection' })
-        }
-        cart.items.forEach((item) => item.quantity = req.body.quantity)
+        cart.items.forEach((item) => {
+            if (JSON.stringify(item.itemId) == JSON.stringify(req.params.id)) {
+                if (req.body.quantity === "+") {
+                    item.quantity += 1
+                }
+                if (req.body.quantity === "-") {
+                    item.quantity -= 1
+                }
+            }
+        })
         cart.bill = cart.items.reduce((acc, curr) => {
             return acc + curr.quantity * curr.price;
         }, 0)
         await cart.save()
-        console.log(cart);
         res.status(201).json(cart)
     } catch (error) {
         res.status(400).json(error.message)

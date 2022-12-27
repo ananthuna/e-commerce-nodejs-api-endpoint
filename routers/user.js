@@ -79,4 +79,42 @@ router.post('/logoutAll', Auth, async (req, res) => {
         res.status(500).send()
     }
 })
+
+//profile update
+router.patch('/profileUpdate', Auth, async (req, res) => {
+
+    const updates = Object.keys(req.body)
+    const allowedUpdates = ['firstName', 'lastName', 'email', 'number']
+    const isValidOperation = updates.every((update) => allowedUpdates.includes(update))
+    if (!isValidOperation) {
+
+        return res.status(400).json({ error: 'invalid updates' })
+    }
+
+    try {
+        const user = await User.findOne({ _id: req.user._id })
+        user.firstName = req.body.firstName
+        user.lastName = req.body.lastName
+        user.email = req.body.email
+        user.number = req.body.number
+        await user.save()
+        console.log(user)
+        const { password, tokens, ...others } = user._doc
+        res.status(201).json({ ...others })
+    } catch (err) {
+        console.log(err.message);
+        res.status(404).send({ error: err.message })
+    }
+})
+
+router.get('/userData', Auth, async (req, res) => {
+    try {
+        const user = await User.findOne({ _id: req.user._id })
+        const { password, tokens, ...others } = user._doc
+        res.status(201).json({ ...others })
+    } catch (err) {
+        console.log(err.message);
+        res.status(404).send({ error: err.message })
+    }
+})
 module.exports = router
